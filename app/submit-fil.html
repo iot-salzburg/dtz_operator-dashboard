@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Change filament</title>
+    </head>
+<body>
+<h1>Update the current filament</h1>
+    <form action="" method="POST" enctype="multipart/form-data">
+      <p>
+          <select name="filament" method="GET" action="/">
+            <option value="{{filaments[0]}}" selected>{{filaments[0]}}</option>
+            {% for filament in filaments[1:] %}
+            <option value="{{filament}}">{{filament}}</option>
+            {% endfor %}
+          </select>
+      <input value="Submit" type="submit">
+    </form>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Annodate</title>
+</head>
+<body>
+<h1>Update the current filament</h1>
+    <form action="" method="POST" enctype="multipart/form-data">
+      <p>
+          <select name="filament" method="GET" action="/">
+            <option value="select filament" selected></option>
+            {% for filament in filaments[1:] %}
+            <option value="{{filament}}">{{filament}}</option>
+            {% endfor %}
+          </select>
+      <input value="submit" type="submit">
+    </form>
+
+<h1>Annotate comments to the last print</h1>
+<style>
+  textarea {
+  width: 50%;
+  height: 200px;
+  padding: 12px 20px;
+  box-sizing: border-box;
+  border: 2px solid #ccc;
+  border-radius: 4px;
+  background-color: #f8f8f8;
+  font-size: 16px;
+  resize: none;
+  }
+</style>
+<form method="POST">
+    <input type="radio" value="ok" name="type"> Ok
+    <input type="radio" value="small issue" name="type"> Small issue
+    <input type="radio" value="clogging" name="type"> Filament clogged
+    <input type="radio" value="adhesion error" name="type"> Adhesion Error
+    <input type="radio" value="jump" name="type"> Jump of a axis
+    <input type="radio" value="other" name="type"> Other
+    <br><br>
+    Describe the issue here:
+    <br>
+    <textarea name="textbox"></textarea>
+    <br>
+    <input type="submit">
+</form>
+</body>
+</html>
