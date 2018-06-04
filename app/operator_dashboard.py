@@ -58,9 +58,7 @@ def dashboard():
             print("Unknown exception")
 
     filaments = get_filaments()
-    edit_filament_url = baseurl + "edit_filaments"
-    return render_template('dashboard.html',  filaments=filaments,
-                           edit_filament_url=edit_filament_url)
+    return render_template('dashboard.html',  filaments=filaments)
 
 
 @app.route('/submit', methods=['GET', 'POST'])
@@ -97,10 +95,9 @@ def edit_filaments():
             new_filaments = json.loads(request.form["textbox"])
             with open(path+os.sep+FILAMENTS, "w") as f:
                 f.write(json.dumps(new_filaments, indent=2))
+            return redirect(baseurl + "/display_filaments")
         except json.decoder.JSONDecodeError:
             return jsonify("Invalid json")
-
-        return redirect("http://localhost:6789/display_filaments")
 
     filaments = open(path+os.sep+FILAMENTS).read()
     return render_template('edit_filament.html', old_filaments=filaments)
@@ -148,4 +145,4 @@ def run_tests():
 if __name__ == '__main__':
     run_tests()
     print("Started Program")
-    app.run(host="0.0.0.0", debug=False, port=6789)
+    app.run(host="0.0.0.0", debug=False, port=PORT)
