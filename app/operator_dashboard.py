@@ -14,6 +14,9 @@ __status__ = "Development"
 __desc__ = """This program a dashboard for operators of 3d printers."""
 
 FILAMENTS = "filaments.json"
+PORT = 6789
+hostname = os.uname()[1]
+baseurl = "http://" + hostname + ":" + str(PORT) + os.sep
 
 # webservice setup
 path = os.sep.join(os.path.abspath(__file__).split(os.sep)[:-1])
@@ -55,8 +58,9 @@ def dashboard():
             print("Unknown exception")
 
     filaments = get_filaments()
-    print(filaments)
-    return render_template('dashboard.html',  filaments=filaments)
+    edit_filament_url = baseurl + "edit_filaments"
+    return render_template('dashboard.html',  filaments=filaments,
+                           edit_filament_url=edit_filament_url)
 
 
 @app.route('/submit', methods=['GET', 'POST'])
