@@ -144,5 +144,5 @@ def run_tests():
 
 if __name__ == '__main__':
     run_tests()
-    print("Started Program")
+    print("Started Program on host: {}".format(baseurl))
     app.run(host="0.0.0.0", debug=False, port=PORT)

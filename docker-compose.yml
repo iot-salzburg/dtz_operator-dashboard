@@ -1,0 +1,19 @@
+version: '3.3'
+
+services:
+  operatorDashboard:
+    image: 127.0.0.1:5001/operator_dashboard
+    build: src/
+    ports:
+      - "6789:6789"
+    networks:
+      - operatorNetwork
+
+  redis:
+    image: redis:alpine
+    networks:
+      - operatorNetwork
+
+# Network
+networks:
+  operatorNetwork:
