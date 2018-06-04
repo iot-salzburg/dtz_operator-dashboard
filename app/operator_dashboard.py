@@ -16,7 +16,7 @@ __desc__ = """This program a dashboard for operators of 3d printers."""
 FILAMENTS = "filaments.json"
 PORT = 6789
 hostname = os.uname()[1]
-baseurl = "http://" + hostname + ":" + str(PORT) + os.sep
+baseurl = "http://" + hostname + ":" + str(PORT)
 
 # webservice setup
 path = os.sep.join(os.path.abspath(__file__).split(os.sep)[:-1])
@@ -127,7 +127,7 @@ def annotate_form(req):
     processed_text = "Type: {}, Text: {}, Datetime: {}". \
         format(typ, text, dt)
 
-    with open(path, "w") as f:
+    with open(filepath, "w") as f:
         f.write(json.dumps(events, indent=2))
 
     return processed_text
