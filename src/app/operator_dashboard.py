@@ -108,6 +108,19 @@ def get_filaments():
     return filaments["filaments"]
 
 
+@app.route('/view_events')
+def view_event_days():
+    days = os.listdir(path + os.sep + "events")
+    output = {"Days on which an event occurred": days}
+    output["usage"] = "To watch the events on a specific day, browse 'http://hostname:port/view_events/YYYY-MM-DD"
+    return jsonify(output)
+
+
+@app.route('/view_events/<string:date>')
+def view_event(date):
+    events = json.loads(open(path+os.sep+"events"+os.sep+date+".log").read())
+    return jsonify(events)
+
 def annotate_form(req):
     text = req.form['textbox']
     typ = req.form['type']
