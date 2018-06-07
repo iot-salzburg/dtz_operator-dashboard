@@ -5,7 +5,7 @@ services:
     image: 127.0.0.1:5001/operator_dashboard
     build: src/
     volumes:
-      - src/app/events:/home/src/app/events
+      - ./src/app/events:/home/src/app/events
     ports:
       - "6789:6789"
     networks:
