@@ -22,8 +22,8 @@ LOGSTASH_HOST = os.getenv('LOGSTASH_HOST', 'il060')
 LOGSTASH_PORT = int(os.getenv('LOGSTASH_PORT', '5000'))
 
 # Creating dashboard
-hostname = os.uname()[1]
-baseurl = "http://" + hostname + ":" + str(PORT)
+# hostname = os.uname()[1]
+# baseurl = "http://" + hostname + ":" + str(PORT)
 path = os.sep.join(os.path.abspath(__file__).split(os.sep)[:-1])
 
 # webservice setup
