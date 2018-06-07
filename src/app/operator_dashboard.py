@@ -9,7 +9,7 @@ from redis import Redis
 from logstash import TCPLogstashHandler
 
 
-__date__ = "3 June 2018"
+__date__ = "7 June 2018"
 __version__ = "1.0"
 __email__ = "christoph.schranz@salzburgresearch.at"
 __status__ = "Development"
@@ -113,7 +113,7 @@ def edit_filaments():
             with open(path+os.sep+FILAMENTS, "w") as f:
                 f.write(json.dumps(new_filaments, indent=2))
             logger.info("Edited filaments")
-            return redirect(baseurl + "/display_filaments")
+            return redirect("/display_filaments")
         except json.decoder.JSONDecodeError:
             logger.info("Invalid filaments.json")
             return jsonify("Invalid json")
@@ -142,8 +142,8 @@ def view_event(date):
 
 
 def annotate_form(req):
-    text = req.form['textbox']
     typ = req.form['type']
+    text = req.form.get('textbox', "")
 
     dt = datetime.now().isoformat()
     filepath = "events" + os.sep + dt.split("T")[0] + ".log"

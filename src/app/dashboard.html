@@ -10,7 +10,7 @@
       <p>
           <select name="filament" method="GET" action="/">
             <option value="select filament" selected></option>
-            {% for filament in filaments[1:] %}
+            {% for filament in filaments[0:] %}
             <option value="{{filament}}">{{filament}}</option>
             {% endfor %}
           </select>
