@@ -130,7 +130,7 @@ def get_filaments():
 @app.route('/view_events')
 def view_event_days():
     days = os.listdir(path + os.sep + "events")
-    output = {"Days": list(days)}
+    output = dict({"Days": list(days)})
     output["usage"] = "To watch the events on a specific day, browse 'http://hostname:port/view_events/YYYY-MM-DD"
     return jsonify(output)
 
@@ -146,7 +146,7 @@ def annotate_form(req):
     text = req.form.get('textbox', "")
 
     dt = datetime.now().isoformat()
-    filepath = "events" + os.sep + dt.split("T")[0] + ".log"
+    filepath = path + os.sep + "events" + os.sep + dt.split("T")[0] + ".log"
     if os.path.exists(filepath):
         with open(filepath) as f:
             events = json.loads(f.read())
