@@ -176,9 +176,12 @@ def annotate_form(req):
 @app.route('/nozzle_cleanings')
 def nozzle_cleanings():
     filepath = path + os.sep + "data" + os.sep + "nozzle_cleanings.log"
-    with open(filepath, "r") as f:
-        cleanings = f.readlines()
-    cleanings = [x.strip() for x in cleanings]
+    if os.path.exists(filepath):
+        with open(filepath, "r") as f:
+            cleanings = f.readlines()
+        cleanings = [x.strip() for x in cleanings]
+    else:
+        cleanings = list()
 
     output = dict({"doc": "Reported Nozzle Cleanings"})
     output["values"] = cleanings
