@@ -46,7 +46,3 @@ You can edit the filament list on
 
 Be sure that you submit a valid json file.
 If everything works well, you will be redirected to the valid json file.
-
-
-
-

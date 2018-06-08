@@ -14,7 +14,7 @@
             <option value="{{filament}}">{{filament}}</option>
             {% endfor %}
           </select>
-      <input value="submit" type="submit"><br>
+      <input value="Submit" type="submit" name="update_filament"><br>
       <li>
         <a href="/edit_filaments">
             Add, edit or delete a filament</a>
@@ -48,12 +48,26 @@
     <br>
     <textarea name="textbox"></textarea>
     <br>
-    <input type="submit">
-    <br><br>
+    <input value="Submit" type="submit" name="annotate_comment">
+    <br>
       <li>
         <a href="/view_events">
-            View historical events</a>
+            View historical annotations</a>
     </li>
 </form>
+
+
+<h1>Report nozzle cleaning</h1>
+    <form action="" method="POST" enctype="multipart/form-data">
+
+
+    <input value="Submit Nozzle Cleaning" type="submit" name="nozzle_cleaning"><br>
+
+    <li>
+        <a href="/nozzle_cleanings">
+            View historical nozzle cleanings</a>
+    </li>
+    </form>
+
 </body>
 </html>

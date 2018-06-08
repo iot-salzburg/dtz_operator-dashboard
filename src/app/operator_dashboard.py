@@ -30,9 +30,10 @@ path = os.sep.join(os.path.abspath(__file__).split(os.sep)[:-1])
 app = Flask(__name__, template_folder=path)
 redis = Redis(host='redis', port=6379)
 
+# logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 loggername = 'operator-dashboard.logging'
 logger = logging.getLogger(loggername)
-logger.setLevel(os.getenv('LOG_LEVEL', logging.INFO))
+logger.setLevel(logging.DEBUG)
 #  use default and init Logstash Handler
 logstash_handler = TCPLogstashHandler(host=LOGSTASH_HOST,
                                       port=LOGSTASH_PORT,
@@ -62,15 +63,21 @@ def print_status():
 @app.route('/dashboard', methods=['GET', 'POST'])
 def dashboard():
     if request.method == 'POST':
-        if "filament" in request.form:
+        if "update_filament" in request.form:
             filament = request.form["filament"]
             logger.info("Changed filament to {}".format(str(filament)))
             return render_template('success-fil.html', filament=filament)
-        elif "type" in request.form:
+        elif "annotate_comment" in request.form:
             processed_text = annotate_form(request)
             logger.info("Added annotation with values: {}".format(processed_text))
             return render_template('success-ano.html',
                                    text=processed_text)
+        elif "nozzle_cleaning" in request.form:
+            # We already know that the nozzle was cleaned
+            ret = report_nozzle_cleaning(request)
+            logger.info("The nozzle was cleaned")
+            return render_template('success-noz.html')
+
         else:
             logger.info("Unknown exception")
 
@@ -129,15 +136,15 @@ def get_filaments():
 
 @app.route('/view_events')
 def view_event_days():
-    days = os.listdir(path + os.sep + "events")
+    days = os.listdir(path + os.sep + "data")
     output = dict({"Days": list(days)})
-    output["usage"] = "To watch the events on a specific day, browse 'http://hostname:port/view_events/YYYY-MM-DD"
+    output["usage"] = "To watch the data on a specific day, browse 'http://hostname:port/view_events/YYYY-MM-DD"
     return jsonify(output)
 
 
 @app.route('/view_events/<string:date>')
 def view_event(date):
-    events = json.loads(open(path+os.sep+"events"+os.sep+date+".log").read())
+    events = json.loads(open(path+os.sep+"data"+os.sep+date+".log").read())
     return jsonify(events)
 
 
@@ -146,17 +153,17 @@ def annotate_form(req):
     text = req.form.get('textbox', "")
 
     dt = datetime.now().isoformat()
-    filepath = path + os.sep + "events" + os.sep + dt.split("T")[0] + ".log"
+    filepath = path + os.sep + "data" + os.sep + dt.split("T")[0] + ".log"
     if os.path.exists(filepath):
         with open(filepath) as f:
             events = json.loads(f.read())
     else:
-        events = dict({"events": list()})
+        events = dict({"data": list()})
 
     event = {"datetime": dt,
              "type": typ,
              "annotation": text}
-    events["events"].append(event)
+    events["data"].append(event)
     processed_text = "Type: {}, Text: {}, Datetime: {}". \
         format(typ, text, dt)
 
@@ -164,6 +171,31 @@ def annotate_form(req):
         f.write(json.dumps(events, indent=2))
 
     return processed_text
+
+
+@app.route('/nozzle_cleanings')
+def nozzle_cleanings():
+    filepath = path + os.sep + "data" + os.sep + "nozzle_cleanings.log"
+    with open(filepath, "r") as f:
+        cleanings = f.readlines()
+    cleanings = [x.strip() for x in cleanings]
+
+    output = dict({"doc": "Reported Nozzle Cleanings"})
+    output["values"] = cleanings
+    return jsonify(output)
+
+
+def report_nozzle_cleaning(req):
+    # Just to be safe, there is only one option
+    ret = req.form['nozzle_cleaning']
+    # No milliseconds
+    dt = datetime.now().isoformat().split(".")[0]
+    logline = dt + "\n"
+
+    filepath = path + os.sep + "data" + os.sep + "nozzle_cleanings.log"
+    with open(filepath, "a+") as f:
+        f.write(logline)
+    return dt
 
 
 def run_tests():
