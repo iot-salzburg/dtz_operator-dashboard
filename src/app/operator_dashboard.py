@@ -172,10 +172,10 @@ def get_cur_filament():
     if os.path.exists(filepath):
         with open(filepath) as f:
             filchanges = json.loads(f.read())
+        curfil = filchanges["data"][-1]["annotation"]
     else:
-        filchanges = dict({"data": list()})
-    curfil = filchanges["data"][-1]
-    return curfil["annotation"]
+        curfil = "No initial filament found"
+    return curfil
 
 
 def get_filaments():
