@@ -64,7 +64,7 @@ def print_status():
 def dashboard():
     if request.method == 'POST':
         if "update_filament" in request.form:
-            filament = request.form["filament"]
+            filament = add_fil_change(request)
             logger.info("Changed filament to {}".format(str(filament)))
             return render_template('success-fil.html', filament=filament)
         elif "annotate_comment" in request.form:
@@ -82,7 +82,8 @@ def dashboard():
             logger.info("Unknown exception")
 
     filaments = get_filaments()
-    return render_template('dashboard.html',  filaments=filaments)
+    curfil = get_cur_filament()
+    return render_template('dashboard.html',  filaments=filaments, curfil=curfil)
 
 
 @app.route('/submit', methods=['GET', 'POST'])
@@ -112,6 +113,18 @@ def display_filaments():
     return jsonify(filaments)
 
 
+@app.route('/filament_changes')
+def filament_changes():
+    filepath = path + os.sep + "data" + os.sep + "filament_changes.log"
+    if os.path.exists(filepath):
+        with open(filepath) as f:
+            filchanges = json.loads(f.read())
+    else:
+        filchanges = dict({"doc": "Reported Filament Changes",
+                           "values": list()})
+    return jsonify(filchanges)
+
+
 @app.route('/edit_filaments', methods=['GET', 'POST'])
 def edit_filaments():
     if request.method == 'POST':
@@ -127,6 +140,42 @@ def edit_filaments():
 
     filaments = open(path+os.sep+FILAMENTS).read()
     return render_template('edit_filament.html', old_filaments=filaments)
+
+
+def add_fil_change(req):
+    filament = req.form['filament']
+
+    dt = datetime.now().isoformat().split(".")[0]
+    filepath = path + os.sep + "data" + os.sep + "filament_changes.log"
+
+    if os.path.exists(filepath):
+        with open(filepath) as f:
+            events = json.loads(f.read())
+    else:
+        events = dict({"data": list()})
+
+    event = {"datetime": dt,
+             "type": "filament change",
+             "annotation": filament}
+    events["data"].append(event)
+    processed_text = "Type: {}, Text: {}, Datetime: {}". \
+        format("filament change", filament, dt)
+
+    with open(filepath, "w") as f:
+        f.write(json.dumps(events, indent=2))
+
+    return filament
+
+
+def get_cur_filament():
+    filepath = path + os.sep + "data" + os.sep + "filament_changes.log"
+    if os.path.exists(filepath):
+        with open(filepath) as f:
+            filchanges = json.loads(f.read())
+    else:
+        filchanges = dict({"data": list()})
+    curfil = filchanges["data"][-1]
+    return curfil["annotation"]
 
 
 def get_filaments():
@@ -171,7 +220,6 @@ def annotate_form(req):
         f.write(json.dumps(events, indent=2))
 
     return processed_text
-
 
 @app.route('/nozzle_cleanings')
 def nozzle_cleanings():

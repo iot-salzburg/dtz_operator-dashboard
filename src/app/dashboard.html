@@ -6,6 +6,8 @@
 </head>
 <body>
 <h1>Update the current filament</h1>
+
+    The current filament is: {{curfil}}.
     <form action="" method="POST" enctype="multipart/form-data">
       <p>
           <select name="filament" method="GET" action="/">
@@ -17,7 +19,11 @@
       <input value="Submit" type="submit" name="update_filament"><br>
       <li>
         <a href="/edit_filaments">
-            Add, edit or delete a filament</a>
+            Add, edit or delete the filament set</a>
+    </li>
+      <li>
+        <a href="/filament_changes">
+            View historical filament changes</a>
     </li>
     </form>
 
