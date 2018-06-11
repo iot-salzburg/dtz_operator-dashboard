@@ -6,6 +6,8 @@ from datetime import datetime
 from flask import Flask, jsonify, request, render_template, redirect
 from redis import Redis
 
+# confluent_kafka is based on librdkafka, details in requirements.txt
+from confluent_kafka import Producer, KafkaError
 from logstash import TCPLogstashHandler
 
 
@@ -18,14 +20,11 @@ __desc__ = """This program a dashboard for operators of 3d printers."""
 FILAMENTS = "filaments.json"
 PORT = 6789
 
-LOGSTASH_HOST = os.getenv('LOGSTASH_HOST', 'il060')
+LOGSTASH_HOST = os.getenv('LOGSTASH_HOST', 'iot86')  # TODO il060
 LOGSTASH_PORT = int(os.getenv('LOGSTASH_PORT', '5000'))
 
 # Creating dashboard
-# hostname = os.uname()[1]
-# baseurl = "http://" + hostname + ":" + str(PORT)
-path = os.sep.join(os.path.abspath(__file__).split(os.sep)[:-1])
-print(path)
+path = os.sep.join(os.path.abspath(__file__).split(os.sep)[:-1])+os.sep+"app"
 
 # webservice setup
 app = Flask(__name__, template_folder=path)
@@ -41,6 +40,34 @@ logstash_handler = TCPLogstashHandler(host=LOGSTASH_HOST,
                                       version=1)
 logger.addHandler(logstash_handler)
 logger.info('Added Logstash Logger for the operator Dashboard with loggername: {}'.format(loggername))
+
+# Define Kafka Producer
+# topics and servers should be of the form: "topic1,topic2,..."
+KAFKA_TOPIC = "OperatorData"
+BOOTSTRAP_SERVERS = 'il061,il062,il063'
+KAFKA_GROUP_ID = "operator-adapter"
+
+conf = {'bootstrap.servers': BOOTSTRAP_SERVERS}
+producer = Producer(**conf)
+
+
+# noinspection PyBroadException
+def publish_message(message):
+    """
+    Publish the canonical data format (Version: i-maintenance first iteration)    to the Kafka Bus.
+    Keyword argument:
+    :param message: dictionary with 4 keywords
+    :return: None
+    """
+    try:
+        producer.produce(KAFKA_TOPIC, json.dumps(message).encode('utf-8'),
+                         key=str(message['Datastream']['@iot.id']).encode('utf-8'))
+        producer.poll(0)  # using poll(0), as Eden Hill mentions it avoids BufferError: Local: Queue full
+        # producer.flush() poll should be faster here
+        #
+        # print("sent:", str(message), str(message['Datastream']['@iot.id']).encode('utf-8'))
+    except:
+        logger.exception("Exception while sending: {} \non kafka topic: {}".format(message, KAFKA_TOPIC))
 
 
 # http://0.0.0.0:6789/
