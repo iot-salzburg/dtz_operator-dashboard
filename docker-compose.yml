@@ -5,7 +5,7 @@ services:
     image: 127.0.0.1:5001/operator_dashboard
     build: src/
     volumes:
-      - ./src/app/data:/home/src/app/data
+      - ./src/app/data/:/usr/src/app/data/
     ports:
       - "6789:6789"
     networks:
@@ -19,3 +19,4 @@ services:
 # Network
 networks:
   operatorNetwork:
+
