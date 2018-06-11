@@ -158,8 +158,6 @@ def add_fil_change(req):
              "type": "filament change",
              "annotation": filament}
     events["data"].append(event)
-    processed_text = "Type: {}, Text: {}, Datetime: {}". \
-        format("filament change", filament, dt)
 
     with open(filepath, "w") as f:
         f.write(json.dumps(events, indent=2))
@@ -198,8 +196,9 @@ def view_event(date):
 
 
 def annotate_form(req):
-    typ = req.form['type']
+    status = req.form.get('status', "empty")
     text = req.form.get('textbox', "")
+    aborted = [True if "aborted" in req.form.keys() else False][0]
 
     dt = datetime.now().isoformat()
     filepath = path + os.sep + "data" + os.sep + dt.split("T")[0] + ".log"
@@ -210,16 +209,18 @@ def annotate_form(req):
         events = dict({"data": list()})
 
     event = {"datetime": dt,
-             "type": typ,
+             "status": status,
+             "aborted": aborted,
              "annotation": text}
     events["data"].append(event)
-    processed_text = "Type: {}, Text: {}, Datetime: {}". \
-        format(typ, text, dt)
+    processed_text = "Datetime: {}, Status: {}, Aborted: {}, Text: {}". \
+        format(dt, status, aborted, text)
 
     with open(filepath, "w") as f:
         f.write(json.dumps(events, indent=2))
 
     return processed_text
+
 
 @app.route('/nozzle_cleanings')
 def nozzle_cleanings():
@@ -261,4 +262,4 @@ def run_tests():
 if __name__ == '__main__':
     run_tests()
     # print("Started Program on host: {}".format(baseurl))
-    app.run(host="0.0.0.0", debug=False, port=PORT)
+    app.run(host="0.0.0.0", debug=True, port=PORT)
