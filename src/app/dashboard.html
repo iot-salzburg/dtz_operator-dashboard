@@ -6,6 +6,8 @@
 </head>
 <body>
 <h1>Update the current filament</h1>
+
+    The current filament is: {{curfil}}.
     <form action="" method="POST" enctype="multipart/form-data">
       <p>
           <select name="filament" method="GET" action="/">
@@ -14,10 +16,14 @@
             <option value="{{filament}}">{{filament}}</option>
             {% endfor %}
           </select>
-      <input value="submit" type="submit"><br>
+      <input value="Submit" type="submit" name="update_filament"><br>
       <li>
         <a href="/edit_filaments">
-            Add, edit or delete a filament</a>
+            Add, edit or delete the filament set</a>
+    </li>
+      <li>
+        <a href="/filament_changes">
+            View historical filament changes</a>
     </li>
     </form>
 
@@ -37,23 +43,39 @@
   }
 </style>
 <form method="POST">
-    <input type="radio" value="ok" name="type"> Ok
-    <input type="radio" value="small issue" name="type"> Small issue
-    <input type="radio" value="clogging" name="type"> Filament clogged
-    <input type="radio" value="adhesion error" name="type"> Adhesion Error
-    <input type="radio" value="jump" name="type"> Jump of a axis
-    <input type="radio" value="other" name="type"> Other
+    <input type="radio" value="ok" name="status"> Ok
+    <input type="radio" value="small issue" name="status"> Small issue
+    <input type="radio" value="clogging" name="status"> Filament clogged
+    <input type="radio" value="adhesion error" name="status"> Adhesion Error
+    <input type="radio" value="jump" name="status"> Jump of a axis
+    <input type="radio" value="other" name="status"> Other
+    <br>
+    <input type="checkbox" value="true" name="aborted"> Aborted
     <br><br>
     Describe the issue here:
     <br>
     <textarea name="textbox"></textarea>
     <br>
-    <input type="submit">
-    <br><br>
+    <input value="Submit" type="submit" name="annotate_comment">
+    <br>
       <li>
         <a href="/view_events">
-            View historical events</a>
+            View historical annotations</a>
     </li>
 </form>
+
+
+<h1>Report nozzle cleaning</h1>
+    <form action="" method="POST" enctype="multipart/form-data">
+
+
+    <input value="Submit Nozzle Cleaning" type="submit" name="nozzle_cleaning"><br>
+
+    <li>
+        <a href="/nozzle_cleanings">
+            View historical nozzle cleanings</a>
+    </li>
+    </form>
+
 </body>
 </html>

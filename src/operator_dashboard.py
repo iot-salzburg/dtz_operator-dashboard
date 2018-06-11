@@ -25,14 +25,16 @@ LOGSTASH_PORT = int(os.getenv('LOGSTASH_PORT', '5000'))
 # hostname = os.uname()[1]
 # baseurl = "http://" + hostname + ":" + str(PORT)
 path = os.sep.join(os.path.abspath(__file__).split(os.sep)[:-1])
+print(path)
 
 # webservice setup
 app = Flask(__name__, template_folder=path)
 redis = Redis(host='redis', port=6379)
 
+# logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 loggername = 'operator-dashboard.logging'
 logger = logging.getLogger(loggername)
-logger.setLevel(os.getenv('LOG_LEVEL', logging.INFO))
+logger.setLevel(logging.DEBUG)
 #  use default and init Logstash Handler
 logstash_handler = TCPLogstashHandler(host=LOGSTASH_HOST,
                                       port=LOGSTASH_PORT,
@@ -62,20 +64,27 @@ def print_status():
 @app.route('/dashboard', methods=['GET', 'POST'])
 def dashboard():
     if request.method == 'POST':
-        if "filament" in request.form:
-            filament = request.form["filament"]
+        if "update_filament" in request.form:
+            filament = add_fil_change(request)
             logger.info("Changed filament to {}".format(str(filament)))
             return render_template('success-fil.html', filament=filament)
-        elif "type" in request.form:
+        elif "annotate_comment" in request.form:
             processed_text = annotate_form(request)
             logger.info("Added annotation with values: {}".format(processed_text))
             return render_template('success-ano.html',
                                    text=processed_text)
+        elif "nozzle_cleaning" in request.form:
+            # We already know that the nozzle was cleaned
+            ret = report_nozzle_cleaning(request)
+            logger.info("The nozzle was cleaned")
+            return render_template('success-noz.html')
+
         else:
             logger.info("Unknown exception")
 
     filaments = get_filaments()
-    return render_template('dashboard.html',  filaments=filaments)
+    curfil = get_cur_filament()
+    return render_template('dashboard.html',  filaments=filaments, curfil=curfil)
 
 
 @app.route('/submit', methods=['GET', 'POST'])
@@ -105,6 +114,18 @@ def display_filaments():
     return jsonify(filaments)
 
 
+@app.route('/filament_changes')
+def filament_changes():
+    filepath = path + os.sep + "data" + os.sep + "filament_changes.log"
+    if os.path.exists(filepath):
+        with open(filepath) as f:
+            filchanges = json.loads(f.read())
+    else:
+        filchanges = dict({"doc": "Reported Filament Changes",
+                           "values": list()})
+    return jsonify(filchanges)
+
+
 @app.route('/edit_filaments', methods=['GET', 'POST'])
 def edit_filaments():
     if request.method == 'POST':
@@ -122,6 +143,40 @@ def edit_filaments():
     return render_template('edit_filament.html', old_filaments=filaments)
 
 
+def add_fil_change(req):
+    filament = req.form['filament']
+
+    dt = datetime.now().isoformat().split(".")[0]
+    filepath = path + os.sep + "data" + os.sep + "filament_changes.log"
+
+    if os.path.exists(filepath):
+        with open(filepath) as f:
+            events = json.loads(f.read())
+    else:
+        events = dict({"data": list()})
+
+    event = {"datetime": dt,
+             "type": "filament change",
+             "annotation": filament}
+    events["data"].append(event)
+
+    with open(filepath, "w") as f:
+        f.write(json.dumps(events, indent=2))
+
+    return filament
+
+
+def get_cur_filament():
+    filepath = path + os.sep + "data" + os.sep + "filament_changes.log"
+    if os.path.exists(filepath):
+        with open(filepath) as f:
+            filchanges = json.loads(f.read())
+        curfil = filchanges["data"][-1]["annotation"]
+    else:
+        curfil = "No initial filament found"
+    return curfil
+
+
 def get_filaments():
     filaments = json.loads(open(path+os.sep+FILAMENTS).read())
     return filaments["filaments"]
@@ -129,41 +184,71 @@ def get_filaments():
 
 @app.route('/view_events')
 def view_event_days():
-    days = os.listdir(path + os.sep + "events")
+    days = os.listdir(path + os.sep + "data")
     output = dict({"Days": list(days)})
-    output["usage"] = "To watch the events on a specific day, browse 'http://hostname:port/view_events/YYYY-MM-DD"
+    output["usage"] = "To watch the data on a specific day, browse 'http://hostname:port/view_events/YYYY-MM-DD"
     return jsonify(output)
 
 
 @app.route('/view_events/<string:date>')
 def view_event(date):
-    events = json.loads(open(path+os.sep+"events"+os.sep+date+".log").read())
+    events = json.loads(open(path+os.sep+"data"+os.sep+date+".log").read())
     return jsonify(events)
 
 
 def annotate_form(req):
-    typ = req.form['type']
+    status = req.form.get('status', "empty")
     text = req.form.get('textbox', "")
+    aborted = [True if "aborted" in req.form.keys() else False][0]
 
     dt = datetime.now().isoformat()
-    filepath = path + os.sep + "events" + os.sep + dt.split("T")[0] + ".log"
+    filepath = path + os.sep + "data" + os.sep + dt.split("T")[0] + ".log"
     if os.path.exists(filepath):
         with open(filepath) as f:
             events = json.loads(f.read())
     else:
-        events = dict({"events": list()})
+        events = dict({"data": list()})
 
     event = {"datetime": dt,
-             "type": typ,
+             "status": status,
+             "aborted": aborted,
              "annotation": text}
-    events["events"].append(event)
-    processed_text = "Type: {}, Text: {}, Datetime: {}". \
-        format(typ, text, dt)
+    events["data"].append(event)
+    processed_text = "Datetime: {}, Status: {}, Aborted: {}, Text: {}". \
+        format(dt, status, aborted, text)
 
     with open(filepath, "w") as f:
         f.write(json.dumps(events, indent=2))
 
     return processed_text
+
+
+@app.route('/nozzle_cleanings')
+def nozzle_cleanings():
+    filepath = path + os.sep + "data" + os.sep + "nozzle_cleanings.log"
+    if os.path.exists(filepath):
+        with open(filepath, "r") as f:
+            cleanings = f.readlines()
+        cleanings = [x.strip() for x in cleanings]
+    else:
+        cleanings = list()
+
+    output = dict({"doc": "Reported Nozzle Cleanings"})
+    output["values"] = cleanings
+    return jsonify(output)
+
+
+def report_nozzle_cleaning(req):
+    # Just to be safe, there is only one option
+    ret = req.form['nozzle_cleaning']
+    # No milliseconds
+    dt = datetime.now().isoformat().split(".")[0]
+    logline = dt + "\n"
+
+    filepath = path + os.sep + "data" + os.sep + "nozzle_cleanings.log"
+    with open(filepath, "a+") as f:
+        f.write(logline)
+    return dt
 
 
 def run_tests():
@@ -178,4 +263,4 @@ def run_tests():
 if __name__ == '__main__':
     run_tests()
     # print("Started Program on host: {}".format(baseurl))
-    app.run(host="0.0.0.0", debug=False, port=PORT)
+    app.run(host="0.0.0.0", debug=True, port=PORT)

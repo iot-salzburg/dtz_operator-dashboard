@@ -19,24 +19,12 @@ To view the status:
 [http://hostname:6789/status](http://hostname:6789/status)
 
 
-# Docker deployment
+## Docker deployment
 
 Build local Docker image:
 ```bash
-sudo docker build -t operator-dashboard .
+sudo docker-compose up --build
 ```
-
-Remove if container already exists:
-```bash
-sudo docker rm -f operator-dashboard || true
-```
-
-
-Start with given env variables:
-```bash
-sudo docker run --name operator-dashboard --restart always operator-dashboard
-```
-
 
 
 ## Add, edit or delete a filament
@@ -46,7 +34,3 @@ You can edit the filament list on
 
 Be sure that you submit a valid json file.
 If everything works well, you will be redirected to the valid json file.
-
-
-
-
