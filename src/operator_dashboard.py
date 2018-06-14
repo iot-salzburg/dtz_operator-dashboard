@@ -100,14 +100,14 @@ def dashboard():
             filament = add_fil_change(request)
             logger.info("Changed filament to {}".format(str(filament)))
             message['result'] = str(filament)
-            message['Datastream'] = dict({'@iot.id': 35})#"NozzleCleansing"}})
+            message['Datastream'] = dict({'@iot.id': 35})  # "3DPrinterFilamentChange"}})
             publish_message(message)
             return render_template('success-fil.html', filament=filament)
         elif "annotate_comment" in request.form:
             processed_text = annotate_form(request)
             logger.info("Added annotation with values: {}".format(processed_text))
             message['result'] = processed_text
-            message['Datastream'] = dict({'@iot.id': 35})#"NozzleCleansing"}})
+            message['Datastream'] = dict({'@iot.id': 36})  # "3DPrintAnnotations"}})
             publish_message(message)
             return render_template('success-ano.html',
                                    text=processed_text)
@@ -115,8 +115,8 @@ def dashboard():
             # We already know that the nozzle was cleaned
             ret = report_nozzle_cleaning(request)
             logger.info("The nozzle was cleaned")
-            message['result'] = 1
-            message['Datastream'] = dict({'@iot.id': 35})#"NozzleCleansing"}})
+            message['result'] = ""
+            message['Datastream'] = dict({'@iot.id': 37})  # "3DPrinterNozzleCleansing"}})
             publish_message(message)
             return render_template('success-noz.html')
 
