@@ -48,4 +48,16 @@ If everything works well, you will be redirected to the valid json file.
     kafka-topics --create --zookeeper localhost:2181 --replication-factor 3 --partitions 3 --topic OperatorData
     ```
 
+    View the entries with
+    ```bash
+    kafka-console-consumer --bootstrap-server localhost:9092 \
+    --topic OperatorData \
+    --from-beginning \
+    --formatter kafka.tools.DefaultMessageFormatter \
+    --property print.key=true \
+    --property print.value=true \
+    --property key.deserializer=org.apache.kafka.common.serialization.StringDeserializer \
+    --property value.deserializer=org.apache.kafka.common.serialization.StringDeserializer
+    ```
+
 4) Create the SensorThings topics:

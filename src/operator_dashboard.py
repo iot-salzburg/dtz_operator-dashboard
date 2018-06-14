@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import logging
+import pytz
 from datetime import datetime
 from flask import Flask, jsonify, request, render_template, redirect
 from redis import Redis
@@ -91,23 +92,37 @@ def print_status():
 @app.route('/dashboard', methods=['GET', 'POST'])
 def dashboard():
     if request.method == 'POST':
+        message = dict({
+                'phenomenonTime': datetime.utcnow().replace(tzinfo=pytz.UTC).isoformat(),
+                'resultTime': datetime.utcnow().replace(tzinfo=pytz.UTC).isoformat()})
+
         if "update_filament" in request.form:
             filament = add_fil_change(request)
             logger.info("Changed filament to {}".format(str(filament)))
+            message['result'] = str(filament)
+            message['Datastream'] = dict({'@iot.id': 35})#"NozzleCleansing"}})
+            publish_message(message)
             return render_template('success-fil.html', filament=filament)
         elif "annotate_comment" in request.form:
             processed_text = annotate_form(request)
             logger.info("Added annotation with values: {}".format(processed_text))
+            message['result'] = processed_text
+            message['Datastream'] = dict({'@iot.id': 35})#"NozzleCleansing"}})
+            publish_message(message)
             return render_template('success-ano.html',
                                    text=processed_text)
         elif "nozzle_cleaning" in request.form:
             # We already know that the nozzle was cleaned
             ret = report_nozzle_cleaning(request)
             logger.info("The nozzle was cleaned")
+            message['result'] = 1
+            message['Datastream'] = dict({'@iot.id': 35})#"NozzleCleansing"}})
+            publish_message(message)
             return render_template('success-noz.html')
 
         else:
             logger.info("Unknown exception")
+
 
     filaments = get_filaments()
     curfil = get_cur_filament()
