@@ -136,14 +136,12 @@ def dashboard():
     filaments = get_filaments()
     curfil = get_cur_filament()
     curdt = datetime.now().isoformat().split(".")[0]
-    print(curdt)
     return render_template('dashboard.html',  filaments=filaments, curfil=curfil, curdt=curdt)
 
 
 @app.route('/submit', methods=['GET', 'POST'])
 def submit():
     if request.method == 'POST':
-        print(request.form)
         filament = request.form["filament"]
         return render_template('success-fil.html', filament=filament)
 
