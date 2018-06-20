@@ -2,4 +2,4 @@ flask
 redis
 python-logstash
 pytz
-dateutil
+python-dateutil
