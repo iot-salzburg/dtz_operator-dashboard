@@ -4,7 +4,8 @@ import json
 import logging
 import pytz
 from datetime import datetime
-from flask import Flask, jsonify, request, render_template, redirect
+from dateutil.parser import parse
+from flask import Flask, jsonify, request, render_template, redirect, abort
 from redis import Redis
 
 # confluent_kafka is based on librdkafka, details in requirements.txt
@@ -98,6 +99,8 @@ def dashboard():
 
         if "update_filament" in request.form:
             filament = add_fil_change(request)
+            if filament is None:
+                return abort(406)
             logger.info("Changed filament to {}".format(str(filament)))
             # message['result'] = 0
             message['message'] = str(filament)
@@ -106,6 +109,8 @@ def dashboard():
             return render_template('success-fil.html', filament=filament)
         elif "annotate_comment" in request.form:
             processed_text = annotate_form(request)
+            if processed_text is None:
+                return abort(406)
             logger.info("Added annotation with values: {}".format(processed_text))
             # message['result'] = 0
             message['message'] = processed_text
@@ -116,6 +121,8 @@ def dashboard():
         elif "nozzle_cleaning" in request.form:
             # We already know that the nozzle was cleaned
             ret = report_nozzle_cleaning(request)
+            if ret is None:
+                return abort(406)
             logger.info("The nozzle was cleaned")
             # message['result'] = 0
             message['message'] = "The nozzle was cleaned"
@@ -126,10 +133,11 @@ def dashboard():
         else:
             logger.info("Unknown exception")
 
-
     filaments = get_filaments()
     curfil = get_cur_filament()
-    return render_template('dashboard.html',  filaments=filaments, curfil=curfil)
+    curdt = datetime.now().isoformat().split(".")[0]
+    print(curdt)
+    return render_template('dashboard.html',  filaments=filaments, curfil=curfil, curdt=curdt)
 
 
 @app.route('/submit', methods=['GET', 'POST'])
@@ -190,10 +198,11 @@ def edit_filaments():
 
 def add_fil_change(req):
     filament = req.form['filament']
+    dt = get_dt(request)
+    if filament == "select filament" or dt == "invalid datetime":
+        return None
 
-    dt = datetime.now().isoformat().split(".")[0]
     filepath = path + os.sep + "data" + os.sep + "filament_changes.log"
-
     if os.path.exists(filepath):
         with open(filepath) as f:
             events = json.loads(f.read())
@@ -245,8 +254,10 @@ def annotate_form(req):
     status = req.form.get('status', "empty")
     text = req.form.get('textbox', "")
     aborted = [True if "aborted" in req.form.keys() else False][0]
+    dt = get_dt(request)
+    if dt == "invalid datetime":
+        return None
 
-    dt = datetime.now().isoformat()
     filepath = path + os.sep + "data" + os.sep + dt.split("T")[0] + ".log"
     if os.path.exists(filepath):
         with open(filepath) as f:
@@ -286,14 +297,26 @@ def nozzle_cleanings():
 def report_nozzle_cleaning(req):
     # Just to be safe, there is only one option
     ret = req.form['nozzle_cleaning']
-    # No milliseconds
-    dt = datetime.now().isoformat().split(".")[0]
-    logline = dt + "\n"
+    dt = get_dt(request)
+    if dt == "invalid datetime":
+        return None
 
+    logline = dt + "\n"
     filepath = path + os.sep + "data" + os.sep + "nozzle_cleanings.log"
     with open(filepath, "a+") as f:
         f.write(logline)
     return dt
+
+def get_dt(request):
+    # dt_default = datetime.now().isoformat()
+    dt = request.form.get('datetime', "")
+
+    try:
+        validstring = parse(dt).isoformat()
+        return validstring
+    except:
+        return "invalid datetime"
+
 
 
 def run_tests():

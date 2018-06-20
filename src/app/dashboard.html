@@ -16,6 +16,8 @@
             <option value="{{filament}}">{{filament}}</option>
             {% endfor %}
           </select>
+      <input value={{curdt}} type=datetime-local name="datetime" step=1>
+
       <input value="Submit" type="submit" name="update_filament"><br>
       <li>
         <a href="/edit_filaments">
@@ -56,6 +58,8 @@
     <br>
     <textarea name="textbox"></textarea>
     <br>
+    <input value={{curdt}} type=datetime-local name="datetime" step=1>
+
     <input value="Submit" type="submit" name="annotate_comment">
     <br>
       <li>
@@ -68,7 +72,7 @@
 <h1>Report nozzle cleaning</h1>
     <form action="" method="POST" enctype="multipart/form-data">
 
-
+    <input value={{curdt}} type=datetime-local name="datetime" step=1>
     <input value="Submit Nozzle Cleaning" type="submit" name="nozzle_cleaning"><br>
 
     <li>
