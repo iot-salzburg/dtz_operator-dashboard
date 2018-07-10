@@ -5,16 +5,44 @@ services:
     image: 127.0.0.1:5001/operator_dashboard
     build: src/
     volumes:
-      - ./src/app/data/:/usr/src/app/data/
+      - /mnt/il060-samba-share/il08X/operatorDashboard/prusa-data/:/usr/src/app/data/
+#      - ./src/app/data/:/usr/src/app/data/
     ports:
       - "6789:6789"
     networks:
       - operatorNetwork
+    deploy:
+      placement:
+        constraints: [node.role == worker]
+      resources:
+        limits:
+          cpus: "1"
+          memory: 2G
+      replicas: 1
+      update_config:
+        parallelism: 2
+        delay: 10s
+      restart_policy:
+        condition: on-failure
 
   redis:
     image: redis:alpine
     networks:
       - operatorNetwork
+    deploy:
+      placement:
+        constraints: [node.role == worker]
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+      replicas: 1
+      update_config:
+        parallelism: 2
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+
 
 # Network
 networks:

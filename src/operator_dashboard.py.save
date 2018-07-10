@@ -13,8 +13,8 @@ from confluent_kafka import Producer, KafkaError
 from logstash import TCPLogstashHandler
 
 
-__date__ = "10 July 2018"
-__version__ = "1.1"
+__date__ = "7 June 2018"
+__version__ = "1.0"
 __email__ = "christoph.schranz@salzburgresearch.at"
 __status__ = "Development"
 __desc__ = """This program a dashboard for operators of 3d printers."""
@@ -26,7 +26,7 @@ LOGSTASH_HOST = os.getenv('LOGSTASH_HOST', 'iot86')  # TODO il060
 LOGSTASH_PORT = int(os.getenv('LOGSTASH_PORT', '5000'))
 
 # Creating dashboard
-path = os.sep.join(os.path.abspath(__file__).split(os.sep)[:-1])+os.sep+"app"
+path = os.sep.join(os.path.abspath(__file__).split(os.sep)[:-1])+os.sep+"app"+os.sep+"data"
 
 # webservice setup
 app = Flask(__name__, template_folder=path)
@@ -161,13 +161,13 @@ def annotate():
 
 @app.route('/display_filaments')
 def display_filaments():
-    filaments = json.loads(open(path+os.sep+"data"+os.sep+FILAMENTS).read())
+    filaments = json.loads(open(path+os.sep+FILAMENTS).read())
     return jsonify(filaments)
 
 
 @app.route('/filament_changes')
 def filament_changes():
-    filepath = path + os.sep + "data" + os.sep + "filament_changes.log"
+    filepath = path + os.sep + "filament_changes.log"
     if os.path.exists(filepath):
         with open(filepath) as f:
             filchanges = json.loads(f.read())
@@ -182,7 +182,7 @@ def edit_filaments():
     if request.method == 'POST':
         try:
             new_filaments = json.loads(request.form["textbox"])
-            with open(path+os.sep+"data"+os.sep+FILAMENTS, "w") as f:
+            with open(path+os.sep+FILAMENTS, "w") as f:
                 f.write(json.dumps(new_filaments, indent=2))
             logger.info("Edited filaments")
             return redirect("/display_filaments")
@@ -190,7 +190,7 @@ def edit_filaments():
             logger.info("Invalid filaments.json")
             return jsonify("Invalid json")
 
-    filaments = open(path+os.sep+"data"+os.sep+FILAMENTS).read()
+    filaments = open(path+os.sep+FILAMENTS).read()
     return render_template('edit_filament.html', old_filaments=filaments)
 
 
@@ -200,7 +200,7 @@ def add_fil_change(req):
     if filament == "select filament" or dt == "invalid datetime":
         return None
 
-    filepath = path + os.sep + "data" + os.sep + "filament_changes.log"
+    filepath = path + os.sep + "filament_changes.log"
     if os.path.exists(filepath):
         with open(filepath) as f:
             events = json.loads(f.read())
@@ -219,7 +219,7 @@ def add_fil_change(req):
 
 
 def get_cur_filament():
-    filepath = path + os.sep + "data" + os.sep + "filament_changes.log"
+    filepath = path + os.sep + "filament_changes.log"
     if os.path.exists(filepath):
         with open(filepath) as f:
             filchanges = json.loads(f.read())
@@ -230,13 +230,13 @@ def get_cur_filament():
 
 
 def get_filaments():
-    filaments = json.loads(open(path+os.sep+"data"+os.sep+FILAMENTS).read())
+    filaments = json.loads(open(path+os.sep+FILAMENTS).read())
     return filaments["filaments"]
 
 
 @app.route('/view_events')
 def view_event_days():
-    days = [day for day in os.listdir(path + os.sep + "data") if day.startswith("2")]
+    days = [day for day in os.listdir(path) if day.startswith("2")]
     output = dict({"Days": list(days)})
     output["usage"] = "To watch the data on a specific day, browse 'http://hostname:port/view_events/YYYY-MM-DD"
     return jsonify(output)
@@ -244,9 +244,11 @@ def view_event_days():
 
 @app.route('/view_events/<string:date>')
 def view_event(date):
-    events = json.loads(open(path+os.sep+"data"+os.sep+date+".log").read())
-    return jsonify(events)
-
+    try:
+        events = json.loads(open(path+os.sep+date+".log").read())
+        return jsonify(events)
+    except:
+        return "File not found"
 
 def annotate_form(req):
     status = req.form.get('status', "empty")
@@ -256,7 +258,7 @@ def annotate_form(req):
     if dt == "invalid datetime":
         return None
 
-    filepath = path + os.sep + "data" + os.sep + dt.split("T")[0] + ".log"
+    filepath = path + os.sep + dt.split("T")[0] + ".log"
     if os.path.exists(filepath):
         with open(filepath) as f:
             events = json.loads(f.read())
@@ -279,7 +281,7 @@ def annotate_form(req):
 
 @app.route('/nozzle_cleanings')
 def nozzle_cleanings():
-    filepath = path + os.sep + "data" + os.sep + "nozzle_cleanings.log"
+    filepath = path + os.sep + "nozzle_cleanings.log"
     if os.path.exists(filepath):
         with open(filepath, "r") as f:
             cleanings = f.readlines()
@@ -300,7 +302,7 @@ def report_nozzle_cleaning(req):
         return None
 
     logline = dt + "\n"
-    filepath = path + os.sep + "data" + os.sep + "nozzle_cleanings.log"
+    filepath = path + os.sep + "nozzle_cleanings.log"
     with open(filepath, "a+") as f:
         f.write(logline)
     return dt
@@ -318,7 +320,7 @@ def get_dt(request):
 
 
 def run_tests():
-    filaments = json.loads(open(path+os.sep+"data"+os.sep+FILAMENTS).read())
+    filaments = json.loads(open(path + os.sep + FILAMENTS).read())
     fila1 = filaments["filaments"]
     fila2 = list(set(fila1))
     if len(fila1) != len(fila2):
@@ -330,4 +332,3 @@ if __name__ == '__main__':
     run_tests()
     # print("Started Program on host: {}".format(baseurl))
     app.run(host="0.0.0.0", debug=True, port=PORT)
-
