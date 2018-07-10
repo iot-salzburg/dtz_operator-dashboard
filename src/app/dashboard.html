@@ -2,10 +2,11 @@
 <html lang="en" xmlns="http://www.w3.org/1999/html">
 <head>
     <meta charset="UTF-8">
-    <title>Operator Dashboard</title>
+    <title>Prusa i3: Operator Dashboard</title>
 </head>
 <body>
-<h1>Update the current filament</h1>
+<h1>Prusa i3: Operator Dashboard<h1>
+<h2>Update the current filament</h2>
 
     The current filament is: {{curfil}}.
     <form action="" method="POST" enctype="multipart/form-data">
@@ -30,7 +31,7 @@
     </form>
 
 
-<h1>Annotate comments to the last print</h1>
+<h2>Annotate comments to the last print</h2>
 <style>
   textarea {
   width: 50%;
@@ -69,7 +70,7 @@
 </form>
 
 
-<h1>Report nozzle cleaning</h1>
+<h2>Report nozzle cleaning</h2>
     <form action="" method="POST" enctype="multipart/form-data">
 
     <input value={{curdt}} type=datetime-local name="datetime" step=1>
