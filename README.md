@@ -1,11 +1,17 @@
 # Operator Dashboard
 
-This Software provides a dashboard for operational 3d printer data.
+This software is part of the DTZ-project and provides operational dashboards for 3d printer. 
+
+## Prerequisites:
+
+* docker-compose
+
 
 ## Start
 
+Build local Docker image:
 ```bash
-./src/operator_dashboard.py
+sudo docker-compose up --build
 ```
 
 Visit:
@@ -18,13 +24,6 @@ Here you can submit a filament change and annotate
 To view the status:
 [http://hostname:6789/status](http://hostname:6789/status)
 
-
-## Docker deployment
-
-Build local Docker image:
-```bash
-sudo docker-compose up --build
-```
 
 
 ## Add, edit or delete a filament
