@@ -13,7 +13,7 @@ from confluent_kafka import Producer, KafkaError
 from logstash import TCPLogstashHandler
 
 
-__date__ = "10 July 2018"
+__date__ = "13 August 2018"
 __version__ = "1.1"
 __email__ = "christoph.schranz@salzburgresearch.at"
 __status__ = "Development"
@@ -306,11 +306,11 @@ def report_nozzle_cleaning(req):
     return dt
 
 def get_dt(request):
-    # dt_default = datetime.now().isoformat()
+    # dt_default = datetime.now().replace(tzinfo=pytz.UTC).isoformat()
     dt = request.form.get('datetime', "")
 
     try:
-        validstring = parse(dt).isoformat()
+        validstring = parse(dt).replace(tzinfo=pytz.UTC).isoformat()
         return validstring
     except:
         return "invalid datetime"
