@@ -1,0 +1,13 @@
+{
+  "Things": {
+    "prusa3d": {"id": 1}
+  },
+  "Sensors": {
+    "prusa3d.operatordashboard": {"id": 6}
+  },
+  "Datastreams": {
+    "prusa3d.filament.event.change": {"id": 10},
+    "prusa3d.print.event.annotation": {"id": 11},
+    "prusa3d.nozzle.event.cleaning": {"id": 12}
+  }
+}

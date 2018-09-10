@@ -13,7 +13,7 @@ from confluent_kafka import Producer, KafkaError
 from logstash import TCPLogstashHandler
 
 
-__date__ = "06 September 2018"
+__date__ = "10 September 2018"
 __version__ = "1.2"
 __email__ = "christoph.schranz@salzburgresearch.at"
 __status__ = "Development"
@@ -22,7 +22,7 @@ __desc__ = """This program a dashboard for operators of 3d printers."""
 FILAMENTS = "filaments.json"
 PORT = 6789
 
-LOGSTASH_HOST = os.getenv('LOGSTASH_HOST', 'iot86')  # TODO il060
+LOGSTASH_HOST = os.getenv('LOGSTASH_HOST', 'iot86')  # TODO il081
 LOGSTASH_PORT = int(os.getenv('LOGSTASH_PORT', '5000'))
 
 # Creating dashboard
@@ -45,9 +45,14 @@ logger.info('Added Logstash Logger for the operator Dashboard with loggername: {
 
 # Define Kafka Producer
 # topics and servers should be of the form: "topic1,topic2,..."
-KAFKA_TOPIC = "OperatorData"
-BOOTSTRAP_SERVERS = '192.168.48.81,192.168.48.82,192.168.48.83'
+KAFKA_TOPIC = "dtz.sensorthings"
+BOOTSTRAP_SERVERS = '192.168.48.81:9092,192.168.48.82:9092,192.168.48.83:9092'
 KAFKA_GROUP_ID = "operator-adapter"
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
+datastream_file = os.path.join(dir_path, "app", "sensorthings", "sensorthings.json")
+with open(datastream_file) as ds_file:
+    DATASTREAM_MAPPING = json.load(ds_file)["Datastreams"]
 
 conf = {'bootstrap.servers': BOOTSTRAP_SERVERS}
 producer = Producer(**conf)
@@ -62,14 +67,15 @@ def publish_message(message):
     :return: None
     """
     try:
-        #producer.produce(KAFKA_TOPIC, json.dumps(message).encode('utf-8'),
-        #                 key=str(message['Datastream']['@iot.id']).encode('utf-8'))
+        producer.produce(KAFKA_TOPIC, json.dumps(message).encode('utf-8'),
+                        key=str(message['Datastream']['@iot.id']).encode('utf-8'))
         producer.poll(0)  # using poll(0), as Eden Hill mentions it avoids BufferError: Local: Queue full
         # producer.flush() poll should be faster here
         #
         # print("sent:", str(message), str(message['Datastream']['@iot.id']).encode('utf-8'))
-    except:
-        logger.exception("Exception while sending: {} \non kafka topic: {}".format(message, KAFKA_TOPIC))
+    except Exception as e:
+        logger.exception("Exception while sending: {} \non kafka topic: {} \n{}"
+                         .format(message, KAFKA_TOPIC, e))
 
 
 # http://0.0.0.0:6789/
@@ -93,49 +99,54 @@ def print_status():
 @app.route('/dashboard', methods=['GET', 'POST'])
 def dashboard():
     if request.method == 'POST':
-        message = dict({
-                'phenomenonTime': datetime.utcnow().replace(tzinfo=pytz.UTC).isoformat(),
-                'resultTime': datetime.utcnow().replace(tzinfo=pytz.UTC).isoformat()})
+        message = dict({'result': None, 'resultTime': datetime.utcnow()
+                       .replace(tzinfo=pytz.UTC).replace(microsecond=0).isoformat()})
 
         if "update_filament" in request.form:
-            filament = add_fil_change(request)
+            phenomenontime, filament = add_fil_change(request)
             if filament is None:
                 return abort(406)
             logger.info("Changed filament to {}".format(str(filament)))
             # message['result'] = 0
-            message['message'] = str(filament)
-            message['Datastream'] = dict({'@iot.id': 35})  # "3DPrinterFilamentChange"}})
+            message["phenomenonTime"] = phenomenontime
+            message['parameters'] = str(filament)
+            message['Datastream'] = dict({'@iot.id':
+                            DATASTREAM_MAPPING["prusa3d.filament.event.change"]["id"]})  # "3DPrinterFilamentChange"}})
             publish_message(message)
             return render_template('success-fil.html', filament=filament)
         elif "annotate_comment" in request.form:
-            processed_text = annotate_form(request)
-            if processed_text is None:
+            phenomenontime, event = annotate_form(request)
+            if event is None:
                 return abort(406)
-            logger.info("Added annotation with values: {}".format(processed_text))
+            logger.info("Added annotation with values: {}".format(event))
             # message['result'] = 0
-            message['message'] = processed_text
-            message['Datastream'] = dict({'@iot.id': 36})  # "3DPrintAnnotations"}})
+            message["phenomenonTime"] = phenomenontime
+            message['parameters'] = event
+            message['Datastream'] = dict({'@iot.id':
+                            DATASTREAM_MAPPING["prusa3d.print.event.annotation"]["id"]})  # "3DPrintAnnotations"}})
             publish_message(message)
             return render_template('success-ano.html',
-                                   text=processed_text)
+                                   text=event)
         elif "nozzle_cleaning" in request.form:
             # We already know that the nozzle was cleaned
-            ret = report_nozzle_cleaning(request)
-            if ret is None:
+            phenomenontime = report_nozzle_cleaning(request)
+            if phenomenontime is None:
                 return abort(406)
             logger.info("The nozzle was cleaned")
             # message['result'] = 0
-            message['message'] = "The nozzle was cleaned"
-            message['Datastream'] = dict({'@iot.id': 37})  # "3DPrinterNozzleCleansing"}})
+            message["phenomenonTime"] = phenomenontime
+            message['parameters'] = "The nozzle was cleaned"
+            message['Datastream'] = dict({'@iot.id':
+                            DATASTREAM_MAPPING["prusa3d.nozzle.event.cleaning"]["id"]})  # "3DPrinterNozzleCleansing"}})
             publish_message(message)
             return render_template('success-noz.html')
 
         else:
-            logger.info("Unknown exception")
+            logger.warning("Unknown request form")
 
     filaments = get_filaments()
     curfil = get_cur_filament()
-    curdt = datetime.now().isoformat().split(".")[0]
+    curdt = datetime.utcnow().replace(tzinfo=pytz.UTC).isoformat().split(".")[0]
     return render_template('dashboard.html',  filaments=filaments, curfil=curfil, curdt=curdt)
 
 
@@ -161,7 +172,7 @@ def annotate():
 
 @app.route('/display_filaments')
 def display_filaments():
-    filaments = json.loads(open(path+os.sep+"data"+os.sep+FILAMENTS).read())
+    filaments = json.loads(open(path+os.sep+FILAMENTS).read())
     return jsonify(filaments)
 
 
@@ -182,7 +193,7 @@ def edit_filaments():
     if request.method == 'POST':
         try:
             new_filaments = json.loads(request.form["textbox"])
-            with open(path+os.sep+"data"+os.sep+FILAMENTS, "w") as f:
+            with open(path+os.sep+FILAMENTS, "w") as f:
                 f.write(json.dumps(new_filaments, indent=2))
             logger.info("Edited filaments")
             return redirect("/display_filaments")
@@ -190,7 +201,7 @@ def edit_filaments():
             logger.info("Invalid filaments.json")
             return jsonify("Invalid json")
 
-    filaments = open(path+os.sep+"data"+os.sep+FILAMENTS).read()
+    filaments = open(path+os.sep+FILAMENTS).read()
     return render_template('edit_filament.html', old_filaments=filaments)
 
 
@@ -215,7 +226,7 @@ def add_fil_change(req):
     with open(filepath, "w") as f:
         f.write(json.dumps(events, indent=2))
 
-    return filament
+    return dt, filament
 
 
 def get_cur_filament():
@@ -230,13 +241,13 @@ def get_cur_filament():
 
 
 def get_filaments():
-    filaments = json.loads(open(path+os.sep+"data"+os.sep+FILAMENTS).read())
+    filaments = json.loads(open(path+os.sep+FILAMENTS).read())
     return filaments["filaments"]
 
 
 @app.route('/view_events')
 def view_event_days():
-    days = [day for day in os.listdir(path + os.sep + "data") if day.startswith("2")]
+    days = os.listdir(path + os.sep + "data")
     output = dict({"Days": list(days)})
     output["usage"] = "To watch the data on a specific day, browse 'http://hostname:port/view_events/YYYY-MM-DD"
     return jsonify(output)
@@ -263,18 +274,13 @@ def annotate_form(req):
     else:
         events = dict({"data": list()})
 
-    event = {"datetime": dt,
-             "status": status,
+    event = {"status": status,
              "aborted": aborted,
              "annotation": text}
     events["data"].append(event)
-    processed_text = "Datetime: {}, Status: {}, Aborted: {}, Text: {}". \
-        format(dt, status, aborted, text)
-
     with open(filepath, "w") as f:
         f.write(json.dumps(events, indent=2))
-
-    return processed_text
+    return dt, event
 
 
 @app.route('/nozzle_cleanings')
@@ -305,8 +311,9 @@ def report_nozzle_cleaning(req):
         f.write(logline)
     return dt
 
+
 def get_dt(request):
-    # dt_default = datetime.now().replace(tzinfo=pytz.UTC).isoformat()
+    # dt_default = datetime.now().isoformat()
     dt = request.form.get('datetime', "")
 
     try:
@@ -318,7 +325,7 @@ def get_dt(request):
 
 
 def run_tests():
-    filaments = json.loads(open(path+os.sep+"data"+os.sep+FILAMENTS).read())
+    filaments = json.loads(open(path + os.sep + FILAMENTS).read())
     fila1 = filaments["filaments"]
     fila2 = list(set(fila1))
     if len(fila1) != len(fila2):
@@ -330,4 +337,3 @@ if __name__ == '__main__':
     run_tests()
     # print("Started Program on host: {}".format(baseurl))
     app.run(host="0.0.0.0", debug=True, port=PORT)
-
