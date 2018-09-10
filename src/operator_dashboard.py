@@ -109,7 +109,7 @@ def dashboard():
             logger.info("Changed filament to {}".format(str(filament)))
             message['result'] = None
             message["phenomenonTime"] = phenomenontime
-            message['parameters'] = str(filament)
+            message['parameters'] = dict({"filament": filament})
             message['Datastream'] = dict({'@iot.id':
                             DATASTREAM_MAPPING["prusa3d.filament.event.change"]["id"]})  # "3DPrinterFilamentChange"}})
             publish_message(message)
@@ -135,7 +135,7 @@ def dashboard():
             logger.info("The nozzle was cleaned")
             message['result'] = None
             message["phenomenonTime"] = phenomenontime
-            message['parameters'] = "The nozzle was cleaned"
+            message['parameters'] = dict({"status": "The nozzle was cleaned"})
             message['Datastream'] = dict({'@iot.id':
                             DATASTREAM_MAPPING["prusa3d.nozzle.event.cleaning"]["id"]})  # "3DPrinterNozzleCleansing"}})
             publish_message(message)
