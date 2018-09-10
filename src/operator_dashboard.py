@@ -72,7 +72,7 @@ def publish_message(message):
         producer.poll(0)  # using poll(0), as Eden Hill mentions it avoids BufferError: Local: Queue full
         # producer.flush() poll should be faster here
         #
-        # print("sent:", str(message), str(message['Datastream']['@iot.id']).encode('utf-8'))
+        logger.info("sent: {} {}".format(message, message['Datastream']['@iot.id']))
     except Exception as e:
         logger.exception("Exception while sending: {} \non kafka topic: {} \n{}"
                          .format(message, KAFKA_TOPIC, e))
@@ -107,7 +107,7 @@ def dashboard():
             if filament is None:
                 return abort(406)
             logger.info("Changed filament to {}".format(str(filament)))
-            # message['result'] = 0
+            message['result'] = None
             message["phenomenonTime"] = phenomenontime
             message['parameters'] = str(filament)
             message['Datastream'] = dict({'@iot.id':
@@ -119,7 +119,7 @@ def dashboard():
             if event is None:
                 return abort(406)
             logger.info("Added annotation with values: {}".format(event))
-            # message['result'] = 0
+            message['result'] = None
             message["phenomenonTime"] = phenomenontime
             message['parameters'] = event
             message['Datastream'] = dict({'@iot.id':
@@ -133,7 +133,7 @@ def dashboard():
             if phenomenontime is None:
                 return abort(406)
             logger.info("The nozzle was cleaned")
-            # message['result'] = 0
+            message['result'] = None
             message["phenomenonTime"] = phenomenontime
             message['parameters'] = "The nozzle was cleaned"
             message['Datastream'] = dict({'@iot.id':
