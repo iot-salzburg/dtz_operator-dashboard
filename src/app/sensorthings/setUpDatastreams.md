@@ -61,7 +61,7 @@ http://il081:8084/v1.0/Things(2)/Locations
 http://il081:8084/v1.0/Sensors
 ```
 {
-  "name": "operator input on the operator dashboard",
+  "name": "Prusa i3 Operator Dashboard",
   "description": "Input from the Prusa i3 3D Printer's operator Dashboard is streamed.",
   "encodingType": "application/pdf",
   "metadata": "https://github.com/iot-salzburg/dtz_operator-dashboard"

@@ -111,7 +111,7 @@ def dashboard():
             message["phenomenonTime"] = phenomenontime
             message['parameters'] = dict({"filament": filament})
             message['Datastream'] = dict({'@iot.id':
-                            DATASTREAM_MAPPING["prusa3d.filament.event.change"]["id"]})  # "3DPrinterFilamentChange"}})
+                        DATASTREAM_MAPPING["prusa3d.filament.event.change"]["id"]})  # "3DPrinterFilamentChange"}})
             publish_message(message)
             return render_template('success-fil.html', filament=filament)
         elif "annotate_comment" in request.form:
@@ -123,7 +123,7 @@ def dashboard():
             message["phenomenonTime"] = phenomenontime
             message['parameters'] = event
             message['Datastream'] = dict({'@iot.id':
-                            DATASTREAM_MAPPING["prusa3d.print.event.annotation"]["id"]})  # "3DPrintAnnotations"}})
+                        DATASTREAM_MAPPING["prusa3d.print.event.annotation"]["id"]})  # "3DPrintAnnotations"}})
             publish_message(message)
             return render_template('success-ano.html',
                                    text=event)
@@ -137,7 +137,7 @@ def dashboard():
             message["phenomenonTime"] = phenomenontime
             message['parameters'] = dict({"status": "The nozzle was cleaned"})
             message['Datastream'] = dict({'@iot.id':
-                            DATASTREAM_MAPPING["prusa3d.nozzle.event.cleaning"]["id"]})  # "3DPrinterNozzleCleansing"}})
+                        DATASTREAM_MAPPING["prusa3d.nozzle.event.cleaning"]["id"]})  # "3DPrinterNozzleCleansing"}})
             publish_message(message)
             return render_template('success-noz.html')
 
