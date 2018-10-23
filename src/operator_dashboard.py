@@ -1,7 +1,7 @@
 import os
 import sys
 import json
-import logging
+import socket
 import pytz
 from datetime import datetime
 from dateutil.parser import parse
@@ -10,44 +10,32 @@ from redis import Redis
 
 # confluent_kafka is based on librdkafka, details in requirements.txt
 from confluent_kafka import Producer, KafkaError
-from logstash import TCPLogstashHandler
 
-
-__date__ = "10 September 2018"
-__version__ = "1.2"
+__date__ = "23 October 2018"
+__version__ = "1.3"
 __email__ = "christoph.schranz@salzburgresearch.at"
 __status__ = "Development"
 __desc__ = """This program a dashboard for operators of 3d printers."""
 
-FILAMENTS = "filaments.json"
-PORT = 6789
+PORT = int(os.getenv("PORT", "6789"))
 
-LOGSTASH_HOST = os.getenv('LOGSTASH_HOST', 'iot86')  # TODO il081
+LOGSTASH_HOST = os.getenv('LOGSTASH_HOST', 'localhost')  # Using localhost if no host was found.
 LOGSTASH_PORT = int(os.getenv('LOGSTASH_PORT', '5000'))
 
+# Define Kafka Producer
+# topics and servers should be of the form: "topic1,topic2,..."
+KAFKA_TOPIC_METRIC = os.getenv('KAFKA_TOPIC_METRIC', "dtz.sensorthings")
+KAFKA_TOPIC_LOGS = os.getenv('KAFKA_TOPIC_LOGS', "dtz.logging")
+BOOTSTRAP_SERVERS = os.getenv('BOOTSTRAP_SERVERS', '192.168.48.81:9092,192.168.48.82:9092,192.168.48.83:9092')
+KAFKA_GROUP_ID = os.getenv('KAFKA_GROUP_ID', "operator-adapter")
+
 # Creating dashboard
+FILAMENTS = "filaments.json"
 path = os.sep.join(os.path.abspath(__file__).split(os.sep)[:-1])+os.sep+"app"
 
 # webservice setup
 app = Flask(__name__, template_folder=path)
-redis = Redis(host='redis', port=6379)
-
-# logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-loggername = 'operator-dashboard.logging'
-logger = logging.getLogger(loggername)
-logger.setLevel(logging.DEBUG)
-#  use default and init Logstash Handler
-logstash_handler = TCPLogstashHandler(host=LOGSTASH_HOST,
-                                      port=LOGSTASH_PORT,
-                                      version=1)
-logger.addHandler(logstash_handler)
-logger.info('Added Logstash Logger for the operator Dashboard with loggername: {}'.format(loggername))
-
-# Define Kafka Producer
-# topics and servers should be of the form: "topic1,topic2,..."
-KAFKA_TOPIC = "dtz.sensorthings"
-BOOTSTRAP_SERVERS = '192.168.48.81:9092,192.168.48.82:9092,192.168.48.83:9092'
-KAFKA_GROUP_ID = "operator-adapter"
+redis = Redis(host='redis', port=PORT)
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 datastream_file = os.path.join(dir_path, "app", "sensorthings", "sensorthings.json")
@@ -67,16 +55,45 @@ def publish_message(message):
     :return: None
     """
     try:
-        producer.produce(KAFKA_TOPIC, json.dumps(message).encode('utf-8'),
-                        key=str(message['Datastream']['@iot.id']).encode('utf-8'))
+        producer.produce(KAFKA_TOPIC_METRIC, json.dumps(message).encode('utf-8'),
+                         key=str(message['Datastream']['@iot.id']).encode('utf-8'))
         producer.poll(0)  # using poll(0), as Eden Hill mentions it avoids BufferError: Local: Queue full
         # producer.flush() poll should be faster here
-        #
-        logger.info("sent: {} {}".format(message, message['Datastream']['@iot.id']))
+        print("sent: {} {}".format(message, message['Datastream']['@iot.id']))
     except Exception as e:
-        logger.exception("Exception while sending: {} \non kafka topic: {} \n{}"
-                         .format(message, KAFKA_TOPIC, e))
+        kafka_logger("Exception while sending: {} \non kafka topic: {} \n{}"
+                     .format(message, KAFKA_TOPIC_METRIC, e), level='WARNING')
 
+
+def kafka_logger(payload, level="debug"):
+    """
+    Publish the canonical data format (Version: i-maintenance first iteration)
+    to the Kafka Bus.
+
+    Keyword argument:
+    :param payload: message content as json or string
+    :param level: log-level
+    :return: None
+    """
+    message = {"Datastream": "dtz.operator-adapter.logging",
+               "phenomenonTime": datetime.utcnow().replace(tzinfo=pytz.UTC).isoformat(),
+               "result": payload,
+               "level": level,
+               "host": socket.gethostname()}
+
+    print("Level: {} \tMessage: {}".format(level, payload))
+    try:
+        producer.produce(KAFKA_TOPIC_LOGS, json.dumps(message).encode('utf-8'),
+                         key=str(message['Datastream']).encode('utf-8'))
+        producer.poll(0)  # using poll(0), as Eden Hill mentions it avoids BufferError: Local: Queue full
+        # producer.flush() poll should be faster here
+    except Exception as e:
+        print("Exception while sending metric: {} \non kafka topic: {}\n Error: {}"
+              .format(message, KAFKA_TOPIC_LOGS, e))
+
+
+kafka_logger('Started operator Dashboard publishing on kafka topics {},{}'.format(KAFKA_TOPIC_LOGS, KAFKA_TOPIC_METRIC),
+             level='INFO')
 
 # http://0.0.0.0:6789/
 @app.route('/')
@@ -106,7 +123,7 @@ def dashboard():
             phenomenontime, filament = add_fil_change(request)
             if filament is None:
                 return abort(406)
-            logger.info("Changed filament to {}".format(str(filament)))
+            kafka_logger("Changed filament to {}".format(str(filament)), level='INFO')
             message['result'] = None
             message["phenomenonTime"] = phenomenontime
             message['parameters'] = dict({"filament": filament})
@@ -118,7 +135,7 @@ def dashboard():
             phenomenontime, event = annotate_form(request)
             if event is None:
                 return abort(406)
-            logger.info("Added annotation with values: {}".format(event))
+            kafka_logger("Added annotation with values: {}".format(event), level='INFO')
             message['result'] = None
             message["phenomenonTime"] = phenomenontime
             message['parameters'] = event
@@ -132,7 +149,7 @@ def dashboard():
             phenomenontime = report_nozzle_cleaning(request)
             if phenomenontime is None:
                 return abort(406)
-            logger.info("The nozzle was cleaned")
+            kafka_logger("The nozzle was cleaned", level='INFO')
             message['result'] = None
             message["phenomenonTime"] = phenomenontime
             message['parameters'] = dict({"status": "The nozzle was cleaned"})
@@ -142,7 +159,7 @@ def dashboard():
             return render_template('success-noz.html')
 
         else:
-            logger.warning("Unknown request form")
+            kafka_logger("Unknown request form", level='WARNING')
 
     filaments = get_filaments()
     curfil = get_cur_filament()
@@ -195,10 +212,10 @@ def edit_filaments():
             new_filaments = json.loads(request.form["textbox"])
             with open(path+os.sep+FILAMENTS, "w") as f:
                 f.write(json.dumps(new_filaments, indent=2))
-            logger.info("Edited filaments")
+            kafka_logger("Edited filaments", level='INFO')
             return redirect("/display_filaments")
         except json.decoder.JSONDecodeError:
-            logger.info("Invalid filaments.json")
+            kafka_logger("Invalid filaments.json", level='INFO')
             return jsonify("Invalid json")
 
     filaments = open(path+os.sep+FILAMENTS).read()
