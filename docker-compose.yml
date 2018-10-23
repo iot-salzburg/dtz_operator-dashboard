@@ -14,8 +14,7 @@ services:
       - /mnt/il060-samba-share/il08X/operatorDashboard/prusa-data/:/usr/src/app/data/
 #      - ./src/app/data/:/usr/src/app/data/
     ports:
-       - $PORT:$PORT
-#      - "6789:6789"
+      - "6789:6789"
     networks:
       - operatorNetwork
     deploy:
